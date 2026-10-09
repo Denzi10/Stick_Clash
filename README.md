@@ -116,58 +116,67 @@ Stick_Clash/
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Running the Game (Terminal Commands)
 
-### Prerequisites
-- **Python 3.10+** (Python 3.13 recommended)
-- **Node.js 18+** & **npm**
-- **Cloudflare Tunnel (`cloudflared`)** *(Included or installed via package manager)*
+Whenever you want to run the project, open PowerShell and use these commands:
 
-### Option A: One-Click Development (Recommended)
-Launch backend, frontend, and Cloudflare tunnel simultaneously:
+### ⚡ Method 1: All-In-One Command (Fastest)
+Runs the **Backend**, **Frontend**, and **Cloudflare Online Tunnel** concurrently in a single terminal:
 
 ```powershell
-& "backend/venv/Scripts/python.exe" tools/dev.py
+& "F:\project D\backend\venv\Scripts\python.exe" "F:\project D\tools\dev.py"
 ```
 
-This will automatically output your public multiplayer URL:
-```text
-============================================================
-🎉 CLOUDFLARE PUBLIC MULTIPLAYER URL: https://example.trycloudflare.com
-Share this link with friends to play online:
-  https://example.trycloudflare.com
-============================================================
-```
+---
 
-### Option B: Running Microservices Independently
+### 💻 Method 2: Running Microservices in Separate Terminals (Standard)
 
-**1. Backend Server:**
+Open two PowerShell windows:
+
+#### 🔹 Terminal 1 — Backend Game Server (FastAPI on Port 8000)
 ```powershell
-cd backend
-# Create and activate virtual environment
-python -m venv venv
-.\venv\Scripts\Activate.ps1
-
-# Install requirements
-pip install -r requirements.txt
-
-# Start FastAPI server on port 8000
-python -m uvicorn app.main:app --port 8000 --reload
+cd "F:\project D\backend"
+& ".\venv\Scripts\python.exe" -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
+*Local API Docs:* [http://localhost:8000/docs](http://localhost:8000/docs)
 
-**2. Frontend Client:**
+#### 🔹 Terminal 2 — Frontend Game Client (Vite on Port 5173)
 ```powershell
-cd frontend
-# Install dependencies
-npm install
-
-# Start Vite dev server on port 5173
+$env:Path += ";C:\Users\denzs\.gemini\antigravity-ide\bin"
+cd "F:\project D\frontend"
 npm run dev
 ```
+*Local Game Surface:* [http://localhost:5173](http://localhost:5173)
 
-**3. Cloudflare Tunnel:**
+---
+
+### 🌐 Method 3: Cloudflare Online Link (Play with Friends Over Internet)
+
+To generate a shareable public HTTPS link for friends without port forwarding, open a 3rd PowerShell window:
+
 ```powershell
-cloudflared tunnel --url http://127.0.0.1:5173
+cd "F:\project D"
+& ".\backend\venv\Scripts\python.exe" tools/run_tunnel.py http://127.0.0.1:5173
+```
+*Copy the generated `https://xxxx.trycloudflare.com` link and share it with other players!*
+
+---
+
+### 🧪 Automated Testing Command
+Run all 20 physics, combat, bot AI, and gauntlet test suites:
+
+```powershell
+cd "F:\project D\backend"
+& ".\venv\Scripts\pytest.exe" -v
+```
+
+---
+
+### 📦 Git Push Command (Sync to GitHub)
+```powershell
+& "C:\Program Files\Git\cmd\git.exe" add .
+& "C:\Program Files\Git\cmd\git.exe" commit -m "Update Stick Clash"
+& "C:\Program Files\Git\cmd\git.exe" push origin main
 ```
 
 ---
