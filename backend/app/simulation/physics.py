@@ -104,7 +104,8 @@ class PhysicsBody:
     is_crouching: bool = False
     can_double_jump: bool = True
     jump_count: int = 0
-    max_jumps: int = 2
+    max_jumps: int = 3  # Triple jump for high mobility!
+    jump_debounce: float = 0.0  # Prevents instant double jump on held key
     drop_through_timer: float = 0.0
     wrap_horizontal: bool = True
     on_conveyor_vx: float = 0.0
@@ -159,6 +160,10 @@ class PhysicsBody:
         # Drop-through timer update
         if self.drop_through_timer > 0.0:
             self.drop_through_timer = max(0.0, self.drop_through_timer - dt)
+
+        # Jump debounce countdown
+        if self.jump_debounce > 0.0:
+            self.jump_debounce = max(0.0, self.jump_debounce - dt)
 
         # 4. Horizontal wrap-around or boundary clamp
         if self.wrap_horizontal:
@@ -240,14 +245,18 @@ class PhysicsBody:
             self.jump_count = 0
 
     def jump(self) -> bool:
+        if self.jump_debounce > 0.0:
+            return False
         if self.is_grounded or self.jump_count == 0:
             self.vy = JUMP_VELOCITY
             self.is_grounded = False
             self.jump_count = 1
+            self.jump_debounce = 0.12
             return True
         elif self.jump_count < self.max_jumps:
             self.vy = DOUBLE_JUMP_VELOCITY
             self.jump_count += 1
+            self.jump_debounce = 0.12
             return True
         return False
 

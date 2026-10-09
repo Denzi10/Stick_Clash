@@ -1,5 +1,5 @@
 """FSM Bot AI for Stick Clash.
-Implements Easy, Normal, and Hard behavior with no hidden information.
+Implements distinct Easy, Normal, and Hard behaviors with smart platform navigation.
 """
 
 import math
@@ -15,9 +15,30 @@ class BotAI:
         self.state = "idle"
         self.decision_timer = 0.0
         self.cached_input = 0
-        self.reaction_interval = (
-            0.35 if self.difficulty == "easy" else (0.20 if self.difficulty == "normal" else 0.08)
-        )
+        self.pulse_timer = 0.0
+        self.jump_pulse = 0
+        self.attack_pulse = 0
+
+        # Reaction intervals by difficulty
+        if self.difficulty == "easy":
+            self.reaction_interval = 0.36
+            self.block_chance = 0.05
+            self.parry_chance = 0.0
+            self.combo_aggression = 0.2
+            self.special_chance = 0.10
+        elif self.difficulty == "hard":
+            self.reaction_interval = 0.05
+            self.block_chance = 0.85
+            self.parry_chance = 0.80
+            self.combo_aggression = 0.95
+            self.special_chance = 0.90
+        else:
+            # Normal
+            self.reaction_interval = 0.16
+            self.block_chance = 0.40
+            self.parry_chance = 0.25
+            self.combo_aggression = 0.60
+            self.special_chance = 0.50
 
     def decide_inputs(
         self,
@@ -26,11 +47,23 @@ class BotAI:
         other_players: List[Any],
         pickups: List[Any],
     ) -> int:
+        # Decrement pulse timers
+        if self.jump_pulse > 0:
+            self.jump_pulse -= 1
+        if self.attack_pulse > 0:
+            self.attack_pulse -= 1
+
         self.decision_timer -= dt
         if self.decision_timer > 0.0:
-            return self.cached_input
+            # Maintain movement bits while clearing pulsed action bits
+            current = self.cached_input
+            if self.jump_pulse == 0:
+                current &= ~InputBitmask.UP
+            if self.attack_pulse == 0:
+                current &= ~(InputBitmask.LIGHT | InputBitmask.HEAVY | InputBitmask.SPECIAL | InputBitmask.DASH)
+            return current
 
-        self.decision_timer = self.reaction_interval + random.uniform(-0.03, 0.03)
+        self.decision_timer = self.reaction_interval + random.uniform(-0.02, 0.02)
 
         bitmask = 0
         if not other_players:
@@ -55,87 +88,123 @@ class BotAI:
         dy = target.physics.y - self_player.physics.y
         dist = math.hypot(dx, dy)
 
-        # 1. Rage activation when ready
+        # 1. Rage activation when ready (Normal & Hard)
         if self_player.combat.power >= 100.0:
-            if self.difficulty in ["normal", "hard"] or random.random() < 0.5:
+            if self.difficulty == "hard":
+                bitmask |= InputBitmask.RAGE
+            elif self.difficulty == "normal" and random.random() < 0.65:
                 bitmask |= InputBitmask.RAGE
 
         # 2. Defensive block / parry on incoming attacks
-        if target.combat.current_action in ["light1", "light2", "light3", "heavy", "slam"] and dist < 120.0:
-            if self.difficulty == "hard":
-                # High chance to parry or block
-                if random.random() < 0.85:
-                    bitmask |= InputBitmask.BLOCK
-                    self.cached_input = bitmask
-                    return bitmask
-            elif self.difficulty == "normal" and random.random() < 0.50:
+        is_target_attacking = target.combat.current_action in ["light1", "light2", "light3", "heavy", "slam", "dash_attack"]
+        if is_target_attacking and dist < 140.0:
+            if random.random() < self.block_chance:
                 bitmask |= InputBitmask.BLOCK
                 self.cached_input = bitmask
                 return bitmask
 
         # 3. Special ability check
-        if self_player.combat.power >= 50.0 and dist < 300.0:
-            if (self.difficulty == "hard" and random.random() < 0.7) or (self.difficulty == "normal" and random.random() < 0.4):
+        if self_player.combat.power >= 40.0 and dist < 340.0 and self_player.combat.special_cooldown_timer <= 0.0:
+            if random.random() < self.special_chance:
                 bitmask |= InputBitmask.SPECIAL
+                self.attack_pulse = 2
+                self.cached_input = bitmask
+                return bitmask
 
-        # 4. Movement: Chase target
-        if dist > 85.0:
+        # 4. Weapon / Crate collection (High priority on Hard and Normal)
+        if not self_player.combat.held_weapon_type and pickups and self.difficulty in ["normal", "hard"]:
+            closest_pickup = min(
+                pickups,
+                key=lambda p: math.hypot(p.x - self_player.physics.x, p.y - self_player.physics.y),
+            )
+            p_dist = math.hypot(closest_pickup.x - self_player.physics.x, closest_pickup.y - self_player.physics.y)
+            if p_dist < 80.0:
+                if closest_pickup.x > self_player.physics.x:
+                    bitmask |= InputBitmask.RIGHT
+                else:
+                    bitmask |= InputBitmask.LEFT
+                if p_dist < 45.0:
+                    bitmask |= InputBitmask.GRAB
+                    self.attack_pulse = 2
+                self.cached_input = bitmask
+                return bitmask
+
+        # 5. Smart Platform Navigation & Movement
+        if dist > 75.0:
+            # Move towards target
             if dx > 15:
                 bitmask |= InputBitmask.RIGHT
             elif dx < -15:
                 bitmask |= InputBitmask.LEFT
 
-            # Jump if target is higher up
-            if dy < -40 and (self_player.physics.is_grounded or random.random() < 0.3):
-                bitmask |= InputBitmask.UP
+            # Vertical tier navigation
+            if dy < -50:
+                # Target is above: Jump / Double Jump
+                if self_player.physics.is_grounded or self_player.physics.jump_count < self_player.physics.max_jumps:
+                    if random.random() < (0.9 if self.difficulty == "hard" else 0.7):
+                        bitmask |= InputBitmask.UP
+                        self.jump_pulse = 2  # Pulse for 2 frames
+            elif dy > 70:
+                # Target is below: Drop through thin platform
+                if self_player.physics.is_grounded and random.random() < 0.6:
+                    bitmask |= InputBitmask.DOWN
 
-            # Drop through platform if target is significantly below
-            if dy > 60 and random.random() < 0.4:
-                bitmask |= InputBitmask.DOWN
-
-            # Dash to close gap
-            if dist > 200.0 and self_player.combat.dash_cooldown_timer <= 0.0 and self.difficulty in ["normal", "hard"]:
-                if random.random() < 0.5:
+            # Dash to close distance or engage (Hard and Normal)
+            if dist > 180.0 and self_player.combat.dash_cooldown_timer <= 0.0:
+                if self.difficulty == "hard" and random.random() < 0.75:
                     bitmask |= InputBitmask.DASH
+                    self.attack_pulse = 2
+                elif self.difficulty == "normal" and random.random() < 0.35:
+                    bitmask |= InputBitmask.DASH
+                    self.attack_pulse = 2
 
         else:
-            # Within attack range!
-            # Face target
-            if dx > 5:
+            # Within close combat strike range!
+            # Face enemy directly
+            if dx > 4:
                 bitmask |= InputBitmask.RIGHT
-            elif dx < -5:
+            elif dx < -4:
                 bitmask |= InputBitmask.LEFT
 
-            # Choose attack
             atk_roll = random.random()
+
             if self.difficulty == "hard":
+                # Hard AI: Smart mix of combos, charged heavies, throws and slams
+                if not self_player.physics.is_grounded:
+                    # In air: down slam or air slash
+                    if dy > 20:
+                        bitmask |= (InputBitmask.DOWN | InputBitmask.LIGHT)
+                    else:
+                        bitmask |= InputBitmask.LIGHT
+                elif target.combat.is_blocking:
+                    # Target is blocking: use unblockable Throw!
+                    bitmask |= InputBitmask.GRAB
+                elif atk_roll < 0.55:
+                    bitmask |= InputBitmask.LIGHT  # Fast combo
+                elif atk_roll < 0.85:
+                    bitmask |= InputBitmask.HEAVY  # Heavy strike
+                else:
+                    bitmask |= InputBitmask.GRAB
+                self.attack_pulse = 2
+
+            elif self.difficulty == "normal":
+                # Normal AI: balanced attack mix
+                if atk_roll < 0.65:
+                    bitmask |= InputBitmask.LIGHT
+                elif atk_roll < 0.88:
+                    bitmask |= InputBitmask.HEAVY
+                else:
+                    bitmask |= InputBitmask.GRAB
+                self.attack_pulse = 2
+
+            else:
+                # Easy AI: slower, single light attack, pauses between swings
                 if atk_roll < 0.45:
                     bitmask |= InputBitmask.LIGHT
-                elif atk_roll < 0.70:
+                    self.attack_pulse = 1
+                elif atk_roll < 0.60:
                     bitmask |= InputBitmask.HEAVY
-                elif atk_roll < 0.85:
-                    bitmask |= InputBitmask.GRAB
-                else:
-                    bitmask |= InputBitmask.DASH
-            elif self.difficulty == "normal":
-                if atk_roll < 0.60:
-                    bitmask |= InputBitmask.LIGHT
-                elif atk_roll < 0.85:
-                    bitmask |= InputBitmask.HEAVY
-                else:
-                    bitmask |= InputBitmask.GRAB
-            else:
-                # Easy
-                if atk_roll < 0.50:
-                    bitmask |= InputBitmask.LIGHT
-                elif atk_roll < 0.70:
-                    bitmask |= InputBitmask.HEAVY
-
-        # Pick up item if nearby
-        if not self_player.combat.held_weapon_type and pickups:
-            nearby_pickups = [p for p in pickups if math.hypot(p.x - self_player.physics.x, p.y - self_player.physics.y) < 60.0]
-            if nearby_pickups and random.random() < 0.6:
-                bitmask |= InputBitmask.GRAB
+                    self.attack_pulse = 1
 
         self.cached_input = bitmask
         return bitmask

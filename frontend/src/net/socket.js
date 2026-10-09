@@ -82,8 +82,8 @@ export class GameSocket {
     });
   }
 
-  sendStartGame() {
-    this.send({ type: "start_game" });
+  sendStartGame(difficulty = "normal") {
+    this.send({ type: "start_game", difficulty: difficulty });
   }
 
   sendAddBot(difficulty = "normal", fighterClass = "brawler") {

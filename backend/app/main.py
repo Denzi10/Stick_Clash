@@ -146,7 +146,8 @@ async def websocket_game_endpoint(websocket: WebSocket, room_code: str):
 
             elif mtype == "start_game" and player_id == room.host_id:
                 if not room.in_game:
-                    await room.start_game()
+                    diff = msg.get("difficulty", "normal")
+                    await room.start_game(default_bot_difficulty=diff)
                     for ws in room.connections.values():
                         await ws.send_json(
                             {

@@ -187,6 +187,75 @@
             <div class="hud-rage-prompt" style="display: none">RAGE READY [R]</div>
           </div>
         </div>
+
+        <!-- Persistent Controls Bar in HUD -->
+        <div class="hud-controls-bar">
+          <div class="hud-ctrl-item"><kbd>A</kbd><kbd>D</kbd> Move</div>
+          <div class="hud-ctrl-item"><kbd>W</kbd>/<kbd>SPC</kbd> High Jump (x3)</div>
+          <div class="hud-ctrl-item"><kbd>S</kbd> Crouch</div>
+          <div class="hud-ctrl-item"><kbd>U</kbd> Dash</div>
+          <div class="hud-ctrl-item"><kbd>J</kbd> Light</div>
+          <div class="hud-ctrl-item"><kbd>K</kbd> Heavy</div>
+          <div class="hud-ctrl-item"><kbd>I</kbd> Parry</div>
+          <div class="hud-ctrl-item"><kbd>L</kbd> Special</div>
+          <div class="hud-ctrl-item"><kbd>R</kbd> Rage</div>
+          <div class="hud-ctrl-item"><kbd>O</kbd> Weapon</div>
+          <button id="btn-hud-show-instructions" class="hud-help-btn" title="View Full Guide">❓ CONTROLS</button>
+        </div>
+      </div>
+
+      <!-- 4. MATCH START INSTRUCTIONS MODAL -->
+      <div id="modal-match-instructions" class="match-instructions-overlay" style="display: none">
+        <div class="match-instructions-card">
+          <div class="instr-header">
+            <div class="instr-badge">⚔️ ROUND START</div>
+            <h2 class="instr-title">CONTROLS & HOW TO PLAY</h2>
+            <div class="instr-timer" id="instr-countdown">Closing in 5s...</div>
+          </div>
+
+          <div class="instr-grid">
+            <!-- Col 1: Movement & Agility -->
+            <div class="instr-card">
+              <div class="instr-card-title">🏃 MOVEMENT & HIGH JUMPS</div>
+              <div class="key-list">
+                <div class="key-entry"><span class="kbd-glow">A</span> <span class="kbd-glow">D</span> <span class="key-desc">Move Left / Right</span></div>
+                <div class="key-entry"><span class="kbd-glow highlight">W</span> or <span class="kbd-glow highlight">SPACE</span> <span class="key-desc"><strong>Super High Jump (Triple Jump!)</strong> Tap in air to reach high tiers</span></div>
+                <div class="key-entry"><span class="kbd-glow">S</span> <span class="key-desc">Crouch / Drop Through Ledge</span></div>
+                <div class="key-entry"><span class="kbd-glow">U</span> or <span class="kbd-glow">SHIFT</span> <span class="key-desc"><strong>Dash Dodge</strong> (Invincible frames)</span></div>
+              </div>
+            </div>
+
+            <!-- Col 2: Attacks & Defense -->
+            <div class="instr-card">
+              <div class="instr-card-title">⚔️ COMBAT & COMBOS</div>
+              <div class="key-list">
+                <div class="key-entry"><span class="kbd-glow highlight">J</span> <span class="key-desc"><strong>Light Attack</strong> (Chain 3-hit combo)</span></div>
+                <div class="key-entry"><span class="kbd-glow highlight">K</span> <span class="key-desc"><strong>Heavy Attack</strong> (Hold to charge +50% DMG)</span></div>
+                <div class="key-entry"><span class="kbd-glow">I</span> <span class="key-desc"><strong>Block & Parry</strong> (Time with enemy strike to STUN!)</span></div>
+                <div class="key-entry"><span class="kbd-glow">O</span> <span class="key-desc"><strong>Pick Up Crate / Throw Weapon</strong></span></div>
+              </div>
+            </div>
+
+            <!-- Col 3: Power, Specials & Rage -->
+            <div class="instr-card instr-card-wide">
+              <div class="instr-card-title">⚡ POWER, SPECIALS & RAGE MODE</div>
+              <div class="power-showcase">
+                <div class="power-col">
+                  <div class="key-entry"><span class="kbd-glow cyan">L</span> <span class="key-desc"><strong>Class Special (40 Power):</strong> Quake Slam / Shadow Dash / Blast / Tackle</span></div>
+                  <div class="key-entry"><span class="kbd-glow gold">R</span> <span class="key-desc"><strong>Rage Mode (100 Power):</strong> +30% Damage, +15% Speed, & HP Regen!</span></div>
+                </div>
+                <div class="power-tips">
+                  <p>✨ <strong>Power charges automatically</strong> over time and with every punch landed!</p>
+                  <p>📦 <strong>Smash crates</strong> to grab Swords, Staffs, Blasters & Shurikens.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="instr-actions">
+            <button id="btn-dismiss-instructions" class="btn-primary btn-fight">FIGHT! (SPACE / CLICK)</button>
+          </div>
+        </div>
       </div>
 
       <!-- 4. GAUNTLET UPGRADE DRAFT MODAL -->

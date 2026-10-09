@@ -72,6 +72,7 @@ class PlayerEntity:
 
         # Network input buffer
         self.latest_input_bitmask = 0
+        self.prev_input_bitmask = 0
         self.input_sequence = 0
 
     def apply_inputs(self, bitmask: int, dt: float, platforms: List[Platform], arena_wrap: bool) -> None:
@@ -114,10 +115,14 @@ class PlayerEntity:
             elif bitmask & InputBitmask.GRAB:
                 self.combat.start_attack("throw")
 
+        # Reset air dash when grounded
+        if self.physics.is_grounded:
+            self.combat.has_used_air_dash = False
+
         # Movement speed calculation
         base_speed = stats.speed
         if self.combat.is_in_rage:
-            base_speed *= 1.15
+            base_speed *= 1.20
         if self.combat.statuses.has_status(StatusType.SLOW):
             base_speed *= 0.60
         if self.combat.is_blocking:
@@ -132,8 +137,10 @@ class PlayerEntity:
                 target_vx = -base_speed
                 self.facing = -1
 
-            # Jump
-            if bitmask & InputBitmask.UP:
+            # Jump: trigger on press-edge or when grounded with debounce expired
+            jump_just_pressed = bool(bitmask & InputBitmask.UP) and not bool(self.prev_input_bitmask & InputBitmask.UP)
+            can_ground_jump = bool(bitmask & InputBitmask.UP) and self.physics.is_grounded and self.physics.jump_debounce <= 0.0
+            if jump_just_pressed or can_ground_jump:
                 self.physics.jump()
 
             # Fast-fall & drop-through
@@ -145,6 +152,8 @@ class PlayerEntity:
                 self.physics.is_crouching = False
         else:
             self.physics.is_crouching = False
+
+        self.prev_input_bitmask = bitmask
 
         fast_fall = bool(bitmask & InputBitmask.DOWN and not self.physics.is_grounded)
 
@@ -289,7 +298,20 @@ class GameRoom:
         player.invuln_timer = RESPAWN_INVULN_SECS
         player.respawn_timer = 0.0
 
-    async def start_game(self) -> None:
+    async def start_game(self, default_bot_difficulty: str = "normal") -> None:
+        # Auto-fill empty opponent slot with a bot if alone in lobby
+        if len(self.players) < 2:
+            import random
+            classes = [FighterClass.BRAWLER, FighterClass.NINJA, FighterClass.MAGE, FighterClass.BRUISER]
+            b_class = random.choice(classes)
+            self.add_player(
+                f"bot_{len(self.players) + 1}",
+                f"Bot ({default_bot_difficulty.upper()})",
+                b_class,
+                team=1,
+                is_bot=True,
+                difficulty=default_bot_difficulty,
+            )
         self.in_game = True
         self.arena_manager.set_arena(self.arena_id)
         for p in self.players.values():

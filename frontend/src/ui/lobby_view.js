@@ -43,7 +43,8 @@ export class LobbyView {
 
     if (this.startBtn) {
       this.startBtn.onclick = () => {
-        this.socket.sendStartGame();
+        const diff = this.botDiffSelect ? this.botDiffSelect.value : "normal";
+        this.socket.sendStartGame(diff);
       };
     }
 

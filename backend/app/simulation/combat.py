@@ -126,6 +126,13 @@ class CombatState:
         # Update dash
         if self.dash_timer > 0.0:
             self.dash_timer = max(0.0, self.dash_timer - dt)
+            if self.dash_timer == 0.0 and self.current_action == "dash":
+                self.current_action = "idle"
+                self.action_frame = 0
+        elif self.current_action == "dash":
+            self.current_action = "idle"
+            self.action_frame = 0
+
         if self.dash_cooldown_timer > 0.0:
             self.dash_cooldown_timer = max(0.0, self.dash_cooldown_timer - dt)
 
@@ -134,11 +141,21 @@ class CombatState:
             self.special_cooldown_timer = max(0.0, self.special_cooldown_timer - dt)
         if self.special_active_timer > 0.0:
             self.special_active_timer = max(0.0, self.special_active_timer - dt)
+            if self.special_active_timer == 0.0 and self.current_action == "special":
+                self.current_action = "idle"
+                self.action_frame = 0
+        elif self.current_action == "special":
+            self.current_action = "idle"
+            self.action_frame = 0
+
+        # Passive power generation (so players can easily attain power & use specials / rage!)
+        if self.power < MAX_POWER:
+            self.power = min(MAX_POWER, self.power + 2.5 * dt)
 
         # Update Rage mode
         if self.is_in_rage:
             self.rage_timer -= dt
-            # Regenerate 2 health/sec during rage
+            # Regenerate 3 health/sec during rage
             self.health = min(self.max_health, self.health + RAGE_HEALTH_REGEN * dt)
             if self.rage_timer <= 0.0:
                 self.is_in_rage = False
@@ -166,6 +183,11 @@ class CombatState:
                 self.current_action = "idle"
                 self.action_frame = 0
                 self.has_hit_current_swing = False
+        elif self.current_action not in ["idle", "dash", "special"]:
+            # Safety watchdog: reset invalid or stuck action states
+            self.current_action = "idle"
+            self.action_frame = 0
+            self.has_hit_current_swing = False
 
         # Status effect ticks
         tick_damages = self.statuses.update(dt)
@@ -336,9 +358,9 @@ def calculate_hit(
     target_state.health = max(0.0, target_state.health - remaining_dmg)
     target_ko = target_state.health <= 0.0
 
-    # 6. Power meter gains
-    attacker_state.power = min(MAX_POWER, attacker_state.power + remaining_dmg * 0.6)
-    target_state.power = min(MAX_POWER, target_state.power + remaining_dmg * 0.4)
+    # 6. Power meter gains (accelerated power attainment)
+    attacker_state.power = min(MAX_POWER, attacker_state.power + remaining_dmg * 1.0)
+    target_state.power = min(MAX_POWER, target_state.power + remaining_dmg * 0.8)
 
     # 7. Knockback calculation (Section 5.4)
     # Launch speed = base_knockback * (1 + 1.5 * (1 - current_hp / max_hp)) / target_weight

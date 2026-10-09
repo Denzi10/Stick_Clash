@@ -38,6 +38,11 @@ class StickClashGame {
     this.inGameHud = document.getElementById("in-game-hud");
     this.screenResults = document.getElementById("screen-results");
     this.screenTutorial = document.getElementById("screen-tutorial");
+    this.modalMatchInstructions = document.getElementById("modal-match-instructions");
+    this.btnDismissInstructions = document.getElementById("btn-dismiss-instructions");
+    this.btnHudShowInstructions = document.getElementById("btn-hud-show-instructions");
+    this.instrCountdownEl = document.getElementById("instr-countdown");
+    this.instructionsInterval = null;
 
     this.setupEvents();
     this.setupNetwork();
@@ -91,6 +96,62 @@ class StickClashGame {
       soundFx.playClick();
       this.showScreen("lobby");
     };
+
+    if (this.btnDismissInstructions) {
+      this.btnDismissInstructions.onclick = () => {
+        soundFx.playClick();
+        this.hideMatchInstructions();
+      };
+    }
+
+    if (this.btnHudShowInstructions) {
+      this.btnHudShowInstructions.onclick = () => {
+        soundFx.playClick();
+        this.showMatchInstructions(8);
+      };
+    }
+
+    window.addEventListener("keydown", (e) => {
+      if (this.modalMatchInstructions && this.modalMatchInstructions.style.display === "flex") {
+        if (e.code === "Space" || e.code === "Enter" || e.code === "Escape") {
+          this.hideMatchInstructions();
+        }
+      }
+    });
+  }
+
+  showMatchInstructions(autoDismissSecs = 5) {
+    if (!this.modalMatchInstructions) return;
+    this.modalMatchInstructions.style.display = "flex";
+
+    if (this.instructionsInterval) {
+      clearInterval(this.instructionsInterval);
+    }
+
+    let remaining = autoDismissSecs;
+    if (this.instrCountdownEl) {
+      this.instrCountdownEl.innerText = `Closing in ${remaining}s...`;
+    }
+
+    this.instructionsInterval = setInterval(() => {
+      remaining -= 1;
+      if (this.instrCountdownEl) {
+        this.instrCountdownEl.innerText = remaining > 0 ? `Closing in ${remaining}s...` : "FIGHT!";
+      }
+      if (remaining <= 0) {
+        this.hideMatchInstructions();
+      }
+    }, 1000);
+  }
+
+  hideMatchInstructions() {
+    if (this.instructionsInterval) {
+      clearInterval(this.instructionsInterval);
+      this.instructionsInterval = null;
+    }
+    if (this.modalMatchInstructions) {
+      this.modalMatchInstructions.style.display = "none";
+    }
   }
 
   setupNetwork() {
@@ -104,6 +165,7 @@ class StickClashGame {
     gameSocket.onGameStarted = (data) => {
       soundFx.playClick();
       this.showScreen("game");
+      this.showMatchInstructions(5);
     };
 
     gameSocket.onSnapshot = (snapshot) => {
@@ -174,6 +236,9 @@ class StickClashGame {
 
   showScreen(screen) {
     this.currentScreen = screen;
+    if (screen !== "game") {
+      this.hideMatchInstructions();
+    }
     this.screenTitle.style.display = screen === "title" ? "flex" : "none";
     this.screenLobby.style.display = screen === "lobby" ? "flex" : "none";
     this.inGameHud.style.display = screen === "game" ? "block" : "none";

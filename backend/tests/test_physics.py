@@ -27,12 +27,20 @@ def test_jump_and_double_jump():
     assert body.jump_count == 1
     assert body.is_grounded is False
 
-    # Second jump in mid-air (double jump)
+    # Second jump in mid-air (double jump) after debounce
+    body.jump_debounce = 0.0
     assert body.jump() is True
     assert body.vy == DOUBLE_JUMP_VELOCITY
     assert body.jump_count == 2
 
-    # Third jump should fail (max 2 jumps)
+    # Third jump in mid-air (triple jump)
+    body.jump_debounce = 0.0
+    assert body.jump() is True
+    assert body.vy == DOUBLE_JUMP_VELOCITY
+    assert body.jump_count == 3
+
+    # Fourth jump should fail (max 3 jumps)
+    body.jump_debounce = 0.0
     assert body.jump() is False
 
 
