@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stick Clash - 2D Online Platform Brawler</title>
+    <link rel="stylesheet" href="/src/styles/main.css" />
+  </head>
+  <body>
+    <div id="app-container">
+      <!-- 2D WebGL / Canvas Rendering Surface -->
+      <canvas id="game-canvas" width="1280" height="720"></canvas>
+
+      <!-- 1. TITLE SCREEN -->
+      <div id="screen-title" class="screen-overlay">
+        <h1 class="game-title">Stick Clash</h1>
+        <div class="game-subtitle">2D Online Stickman Platform Brawler</div>
+
+        <div class="menu-actions">
+          <button id="btn-quick-match" class="btn-primary">QUICK MATCH</button>
+          <button id="btn-create-room" class="btn-primary">CREATE ROOM</button>
+
+          <div class="join-code-row">
+            <input
+              id="input-room-code"
+              class="join-code-input"
+              maxlength="5"
+              placeholder="CODE"
+            />
+            <button id="btn-join-code" class="btn-secondary" style="flex: 1">
+              JOIN
+            </button>
+          </div>
+
+          <button id="btn-open-tutorial" class="btn-secondary">
+            DOJO TUTORIAL
+          </button>
+          <button id="btn-toggle-music" class="btn-secondary">
+            🎵 TOGGLE MUSIC
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. LOBBY SCREEN -->
+      <div id="screen-lobby" class="screen-overlay" style="display: none">
+        <div class="lobby-layout">
+          <div class="lobby-header">
+            <div class="lobby-code-badge">
+              <span style="font-size: 13px; color: var(--text-muted)">ROOM:</span>
+              <span id="lobby-room-code" class="lobby-code-val">ABCDE</span>
+              <button id="btn-copy-code" class="btn-secondary">COPY CODE</button>
+              <button id="btn-copy-link" class="btn-secondary">SHARE LINK</button>
+            </div>
+
+            <div style="display: flex; gap: 10px; align-items: center">
+              <select id="select-bot-difficulty" class="join-code-input" style="width: 110px; font-size: 13px">
+                <option value="easy">EASY</option>
+                <option value="normal" selected>NORMAL</option>
+                <option value="hard">HARD</option>
+              </select>
+              <button id="btn-add-bot" class="btn-secondary">+ ADD BOT</button>
+              <button id="btn-start-match" class="btn-primary">START MATCH</button>
+            </div>
+          </div>
+
+          <!-- Left column: Players list -->
+          <div>
+            <h3 style="font-family: 'Orbitron'; font-size: 14px; margin-bottom: 12px; color: var(--cyan)">
+              PLAYERS IN ROOM
+            </h3>
+            <div id="lobby-players-list" class="lobby-players-list">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Right column: Class Selector -->
+          <div>
+            <h3 style="font-family: 'Orbitron'; font-size: 14px; margin-bottom: 12px; color: var(--gold)">
+              CHOOSE FIGHTER CLASS
+            </h3>
+            <div class="class-grid">
+              <div class="class-select-card active" data-class="brawler">
+                <div class="class-name">BRAWLER</div>
+                <div class="class-special-name">★ Quake Slam</div>
+                <div class="class-desc">+10 Max Guard. High impact leaps.</div>
+              </div>
+
+              <div class="class-select-card" data-class="ninja">
+                <div class="class-name">NINJA</div>
+                <div class="class-special-name">★ Shadow Dash</div>
+                <div class="class-desc">Extra air dash. Phasing through foes.</div>
+              </div>
+
+              <div class="class-select-card" data-class="mage">
+                <div class="class-name">MAGE</div>
+                <div class="class-special-name">★ Elemental Blast</div>
+                <div class="class-desc">Arcane bolts with Freeze and Burn.</div>
+              </div>
+
+              <div class="class-select-card" data-class="bruiser">
+                <div class="class-name">BRUISER</div>
+                <div class="class-special-name">★ Charge Tackle</div>
+                <div class="class-desc">Super armor on heavies. High health.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. IN-GAME HUD -->
+      <div id="in-game-hud" style="display: none">
+        <div class="hud-top-bar">
+          <div id="hud-objective-text" class="hud-objective-box">
+            MATCH IN PROGRESS
+          </div>
+          <div id="hud-match-timer" class="hud-timer-box">01:30</div>
+        </div>
+
+        <div id="hud-kill-feed" class="hud-kill-feed"></div>
+
+        <div class="hud-bottom-plates">
+          <div id="hud-p1-plate" class="hud-player-plate">
+            <div class="hud-plate-header">
+              <span class="hud-name">Player 1</span>
+              <span class="hud-weapon-badge" style="display: none">⚔ SWORD</span>
+            </div>
+            <div class="hud-bar-container">
+              <div class="hud-hp-bar"></div>
+            </div>
+            <div class="hud-bar-container" style="height: 4px">
+              <div class="hud-guard-bar"></div>
+            </div>
+            <div class="hud-bar-container" style="height: 6px">
+              <div class="hud-power-bar"></div>
+            </div>
+            <div class="hud-rage-prompt" style="display: none">RAGE READY [R]</div>
+          </div>
+
+          <div id="hud-p2-plate" class="hud-player-plate">
+            <div class="hud-plate-header">
+              <span class="hud-name">Player 2</span>
+              <span class="hud-weapon-badge" style="display: none">⚔ SWORD</span>
+            </div>
+            <div class="hud-bar-container">
+              <div class="hud-hp-bar"></div>
+            </div>
+            <div class="hud-bar-container" style="height: 4px">
+              <div class="hud-guard-bar"></div>
+            </div>
+            <div class="hud-bar-container" style="height: 6px">
+              <div class="hud-power-bar"></div>
+            </div>
+            <div class="hud-rage-prompt" style="display: none">RAGE READY [R]</div>
+          </div>
+
+          <div id="hud-p3-plate" class="hud-player-plate" style="display: none">
+            <div class="hud-plate-header">
+              <span class="hud-name">Player 3</span>
+              <span class="hud-weapon-badge" style="display: none"></span>
+            </div>
+            <div class="hud-bar-container">
+              <div class="hud-hp-bar"></div>
+            </div>
+            <div class="hud-bar-container" style="height: 4px">
+              <div class="hud-guard-bar"></div>
+            </div>
+            <div class="hud-bar-container" style="height: 6px">
+              <div class="hud-power-bar"></div>
+            </div>
+            <div class="hud-rage-prompt" style="display: none">RAGE READY [R]</div>
+          </div>
+
+          <div id="hud-p4-plate" class="hud-player-plate" style="display: none">
+            <div class="hud-plate-header">
+              <span class="hud-name">Player 4</span>
+              <span class="hud-weapon-badge" style="display: none"></span>
+            </div>
+            <div class="hud-bar-container">
+              <div class="hud-hp-bar"></div>
+            </div>
+            <div class="hud-bar-container" style="height: 4px">
+              <div class="hud-guard-bar"></div>
+            </div>
+            <div class="hud-bar-container" style="height: 6px">
+              <div class="hud-power-bar"></div>
+            </div>
+            <div class="hud-rage-prompt" style="display: none">RAGE READY [R]</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. GAUNTLET UPGRADE DRAFT MODAL -->
+      <div id="modal-upgrades" class="modal-overlay" style="display: none">
+        <h2 style="font-family: 'Orbitron'; font-size: 28px; color: var(--gold)">
+          LEVEL COMPLETE - CHOOSE AN UPGRADE
+        </h2>
+        <div id="upgrade-cards-container" class="upgrade-cards-container">
+          <!-- Dynamically populated cards -->
+        </div>
+      </div>
+
+      <!-- 5. MATCH RESULTS OVERLAY -->
+      <div id="screen-results" class="screen-overlay" style="display: none">
+        <h2 id="results-title" class="game-title" style="font-size: 42px">
+          MATCH OVER
+        </h2>
+        <div id="results-winner" style="font-size: 20px; color: var(--gold); margin-bottom: 24px">
+          Winner Announced
+        </div>
+        <button id="btn-return-lobby" class="btn-primary">RETURN TO LOBBY</button>
+      </div>
+
+      <!-- 6. DOJO TUTORIAL MODAL -->
+      <div id="screen-tutorial" class="screen-overlay" style="display: none">
+        <h2 style="font-family: 'Orbitron'; font-size: 32px; color: var(--cyan); margin-bottom: 16px">
+          TRAINING DOJO CONTROLS
+        </h2>
+        <div style="background: var(--bg-panel); padding: 24px; border-radius: 12px; width: 600px; line-height: 1.8; font-size: 15px">
+          <p><strong>Move / Crouch:</strong> A / D / S (Stick / Arrows)</p>
+          <p><strong>Jump / Double Jump:</strong> W or Space (A on Gamepad)</p>
+          <p><strong>Light Attack:</strong> J (Starts combo, chains up to 3 hits)</p>
+          <p><strong>Heavy Attack:</strong> K (Hold to charge +50% damage)</p>
+          <p><strong>Dash:</strong> U or Shift (Invulnerable during first frames)</p>
+          <p><strong>Block & Parry:</strong> I (Within 8 frames to Parry & stun foe!)</p>
+          <p><strong>Grab / Throw / Pickup:</strong> O</p>
+          <p><strong>Special Move:</strong> L (Costs 50 power)</p>
+          <p><strong>Rage Mode:</strong> R (Costs 100 power, +30% dmg, +15% spd, HP regen)</p>
+        </div>
+        <button id="btn-close-tutorial" class="btn-secondary" style="margin-top: 20px">
+          BACK TO MENU
+        </button>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
