@@ -11,9 +11,19 @@ export class StickmanRenderer {
   render(ctx, player, now) {
     const { x, y, facing, team, fighter_class, action_state, action_frame, is_ragdoll, is_in_rage } = player;
 
-    // Team colors
-    const primaryColor = team === 0 ? "#00f0ff" : "#ff0055";
-    const glowColor = team === 0 ? "rgba(0, 240, 255, 0.6)" : "rgba(255, 0, 85, 0.6)";
+    // Color palette based on team/player (incorporating #44ff00 neon lime from SVG tool)
+    let primaryColor = "#44ff00"; // Signature SVG Stickman Neon Lime
+    if (team === 0) {
+      primaryColor = player.id && player.id.endsWith("2") ? "#00f0ff" : "#44ff00";
+    } else if (team === 1) {
+      primaryColor = "#ff0055";
+    } else if (team === 2) {
+      primaryColor = "#ffb700";
+    } else if (team === 3) {
+      primaryColor = "#a855f7";
+    }
+
+    const glowColor = primaryColor;
 
     if (is_ragdoll) {
       this.renderRagdoll(ctx, player, primaryColor);
@@ -62,22 +72,21 @@ export class StickmanRenderer {
     // Directional flip
     ctx.scale(facing, 1);
 
-    // Kinematic poses based on state
+    // Kinematic poses based on state matching SVG Stickman Tool specifications
     ctx.strokeStyle = primaryColor;
-    ctx.fillStyle = primaryColor;
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 5.5; // Chunky stroke matching SVG tool stroke-width
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.shadowColor = glowColor;
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = 12;
 
     const animTime = now * 10;
-    let headY = -76;
-    let chestY = -60;
-    let hipY = -38;
+    let headY = -74;
+    let chestY = -58;
+    let hipY = -34;
 
-    let lLegAngle = 0.2;
-    let rLegAngle = -0.2;
+    let lLegAngle = 0.22;
+    let rLegAngle = -0.22;
     let lArmAngle = -0.3;
     let rArmAngle = 0.3;
 
@@ -88,13 +97,13 @@ export class StickmanRenderer {
       rArmAngle = Math.sin(animTime) * 0.8;
       headY += Math.abs(Math.sin(animTime)) * 3;
     } else if (action_state === "jump" || !player.is_grounded) {
-      lLegAngle = 0.5;
-      rLegAngle = -0.4;
+      lLegAngle = 0.55;
+      rLegAngle = -0.45;
       lArmAngle = -1.2;
       rArmAngle = -0.9;
     } else if (action_state === "dash") {
-      chestY = -52;
-      hipY = -34;
+      chestY = -50;
+      hipY = -30;
       lLegAngle = -1.1;
       rLegAngle = -0.8;
       lArmAngle = 1.3;
@@ -114,7 +123,7 @@ export class StickmanRenderer {
     } else if (player.is_blocking) {
       rArmAngle = 1.0;
       lArmAngle = 0.9;
-      // Draw energetic guard shield
+      // Energetic guard shield
       ctx.save();
       ctx.strokeStyle = "rgba(255, 230, 0, 0.8)";
       ctx.lineWidth = 4;
@@ -124,10 +133,14 @@ export class StickmanRenderer {
       ctx.restore();
     }
 
-    // 1. Head
+    // 1. Head (SVG Style: filled with white, outlined with bold glowing neon stroke)
+    ctx.save();
+    ctx.fillStyle = "#ffffff";
     ctx.beginPath();
-    ctx.arc(0, headY, 11, 0, Math.PI * 2);
+    ctx.arc(0, headY, 13.5, 0, Math.PI * 2);
+    ctx.fill();
     ctx.stroke();
+    ctx.restore();
 
     // Class Accessory
     this.renderClassAccessory(ctx, fighter_class, headY);
