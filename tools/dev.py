@@ -25,9 +25,13 @@ def main():
 
     # 2. Start Frontend Vite
     print("[2/3] Starting Frontend (Vite on http://127.0.0.1:5173)...")
+    env = os.environ.copy()
+    env["PATH"] = r"C:\Users\denzs\.gemini\antigravity-ide\bin;" + env.get("PATH", "")
+    npm_path = r"C:\Users\denzs\.gemini\antigravity-ide\bin\npm.cmd"
     frontend_proc = subprocess.Popen(
-        ["cmd.exe", "/c", "npm", "run", "dev"],
+        [npm_path if os.path.exists(npm_path) else "npm", "run", "dev"],
         cwd=FRONTEND_DIR,
+        env=env,
     )
 
     time.sleep(2)
