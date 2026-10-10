@@ -144,6 +144,18 @@ class PickupSnapshot(BaseModel):
     despawn_timer: float
 
 
+class PlatformSnapshot(BaseModel):
+    id: str
+    x: float
+    y: float
+    width: float
+    height: float
+    is_solid: bool = True
+    is_slippery: bool = False
+    is_crumbly: bool = False
+    is_moving: bool = False
+
+
 class HazardSnapshot(BaseModel):
     id: str
     hazard_type: str
@@ -156,7 +168,7 @@ class HazardSnapshot(BaseModel):
 
 
 class DiscreteEvent(BaseModel):
-    event_type: str  # hit, ko, parry, guard_break, pickup, status_apply, special, rage, hazard_hit, level_complete
+    event_type: str  # hit, ko, parry, guard_break, pickup, status_apply, special, rage, hazard_hit, level_complete, round_over, new_round, level_cleared
     data: Dict[str, Any]
 
 
@@ -166,6 +178,7 @@ class MatchSnapshot(BaseModel):
     mode: GameMode
     arena_id: str
     players: List[PlayerSnapshot]
+    platforms: List[PlatformSnapshot] = []
     projectiles: List[ProjectileSnapshot] = []
     pickups: List[PickupSnapshot] = []
     hazards: List[HazardSnapshot] = []

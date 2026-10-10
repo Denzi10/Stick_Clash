@@ -13,6 +13,9 @@ class DuelMode(BaseMode):
         self.round_wins: Dict[str, int] = {}
         self.round_in_progress: bool = True
         self.round_break_timer: float = 0.0
+        self.needs_round_reset: bool = False
+        self.just_finished_round: bool = False
+        self.last_round_winner: Optional[str] = None
 
     def update(self, dt: float, active_players: list) -> None:
         if self.is_game_over:
@@ -23,6 +26,7 @@ class DuelMode(BaseMode):
             if self.round_break_timer <= 0.0:
                 self.round_in_progress = True
                 self.time_remaining = self.time_limit
+                self.needs_round_reset = True
             return
 
         if self.round_in_progress:
@@ -35,7 +39,8 @@ class DuelMode(BaseMode):
 
     def finish_round(self, alive_players: list, all_players: list) -> None:
         self.round_in_progress = False
-        self.round_break_timer = 3.0  # 3s pause before next round
+        self.round_break_timer = 2.5  # 2.5s pause before next round
+        self.just_finished_round = True
 
         if len(alive_players) == 1:
             winner = alive_players[0].id
@@ -45,6 +50,8 @@ class DuelMode(BaseMode):
             winner = p1.id if p1.combat.health > p2.combat.health else p2.id
         else:
             winner = None
+
+        self.last_round_winner = winner
 
         if winner:
             self.round_wins[winner] = self.round_wins.get(winner, 0) + 1

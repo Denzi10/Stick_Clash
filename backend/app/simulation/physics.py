@@ -237,12 +237,10 @@ class PhysicsBody:
                             if p.is_crumbly and p.crumble_timer == 0.0:
                                 p.crumble_timer = 2.0
 
-        # Arena floor safety fallback (if fallen off canvas without pit hazard)
-        if self.y > CANVAS_HEIGHT - 20.0 and not self.wrap_horizontal:
-            self.y = CANVAS_HEIGHT - 20.0
+        # Bottom abyss boundary
+        if self.y > CANVAS_HEIGHT + 40.0:
+            self.y = CANVAS_HEIGHT + 40.0
             self.vy = 0.0
-            self.is_grounded = True
-            self.jump_count = 0
 
     def jump(self) -> bool:
         if self.jump_debounce > 0.0:

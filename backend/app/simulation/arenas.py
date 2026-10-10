@@ -5,7 +5,7 @@ Implements the 8 launch arenas and dynamic hazards from Section 9.
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple, Any
 from ..config import CANVAS_WIDTH, CANVAS_HEIGHT
-from ..models.schemas import HazardSnapshot
+from ..models.schemas import HazardSnapshot, PlatformSnapshot
 from .physics import Platform, AABB
 
 
@@ -262,16 +262,45 @@ def build_arenas() -> Dict[str, ArenaDef]:
         hazards=[],
         player_spawns=[(320, 460), (960, 460), (440, 620), (840, 620)],
         weapon_spawns=[(640, 310, "sword"), (320, 460, "nunchucks"), (960, 460, "bat")],
-        background_theme="dojo",
+        background_theme="space",
+    )
+
+    # 9. Space Altar (Cosmic Floating Blocks & Sacred Altar Structure)
+    arenas["space_altar"] = ArenaDef(
+        id="space_altar",
+        name="Space Altar",
+        theme="Cosmic Orbital Altar",
+        wrap_horizontal=False,
+        platforms=[
+            # Center Sacred Altar Block Structure
+            Platform("sa_altar_mid", 640, 560, 480, 44, is_solid=True),
+            # Left Floating Cosmic Defense Block
+            Platform("sa_block_l", 240, 430, 280, 34, is_solid=True),
+            # Right Floating Cosmic Defense Block
+            Platform("sa_block_r", 1040, 430, 280, 34, is_solid=True),
+            # Upper Celestial Altar Tier (One-way jumping)
+            Platform("sa_tier_top", 640, 290, 380, 24, is_solid=False),
+            # Left High Cosmic Perch
+            Platform("sa_perch_l", 190, 180, 180, 20, is_solid=False),
+            # Right High Cosmic Perch
+            Platform("sa_perch_r", 1090, 180, 180, 20, is_solid=False),
+        ],
+        hazards=[
+            # Bottom Void Barrier (Survival Line Hazard)
+            ArenaHazard("sa_void_line", "void_barrier", 640, 675, 1280, 30, damage=100.0),
+        ],
+        player_spawns=[(240, 380), (1040, 380), (640, 500), (640, 240)],
+        weapon_spawns=[(640, 240, "sword"), (240, 380, "staff"), (1040, 380, "blaster")],
+        background_theme="space",
     )
 
     return arenas
 
 
 class ArenaManager:
-    def __init__(self, arena_id: str = "training_dojo"):
+    def __init__(self, arena_id: str = "space_altar"):
         self.all_arenas = build_arenas()
-        self.current_arena = self.all_arenas.get(arena_id, self.all_arenas["training_dojo"])
+        self.current_arena = self.all_arenas.get(arena_id, self.all_arenas["space_altar"])
 
     def set_arena(self, arena_id: str) -> None:
         if arena_id in self.all_arenas:
@@ -282,6 +311,23 @@ class ArenaManager:
             p.update(dt)
         for h in self.current_arena.hazards:
             h.update(dt)
+
+    def get_platform_snapshots(self) -> List[PlatformSnapshot]:
+        return [
+            PlatformSnapshot(
+                id=p.id,
+                x=round(p.x, 1),
+                y=round(p.y, 1),
+                width=p.width,
+                height=p.height,
+                is_solid=p.is_solid,
+                is_slippery=p.is_slippery,
+                is_crumbly=p.is_crumbly,
+                is_moving=p.is_moving,
+            )
+            for p in self.current_arena.platforms
+            if not p.is_broken
+        ]
 
     def get_hazard_snapshots(self) -> List[HazardSnapshot]:
         return [

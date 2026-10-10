@@ -43,6 +43,7 @@ class StickClashGame {
     this.btnHudShowInstructions = document.getElementById("btn-hud-show-instructions");
     this.instrCountdownEl = document.getElementById("instr-countdown");
     this.instructionsInterval = null;
+    this.activeBanner = { text: "MATCH COMMENCING", subtext: "DEFEND THE BLOCKS & ALTAR", timer: 3.0, color: "#00f0ff" };
 
     this.setupEvents();
     this.setupNetwork();
@@ -285,6 +286,40 @@ class StickClashGame {
         const vName = victim ? victim.nickname : "Player";
         const kName = killer ? killer.nickname : null;
         this.hud.addKillFeedEntry(vName, kName, !kName);
+      } else if (ev.event_type === "round_over") {
+        soundFx.playKO();
+        const winner = snapshot.players.find((p) => p.id === ev.data.winner_id);
+        const wName = winner ? winner.nickname : "DRAW";
+        this.activeBanner = {
+          text: `ROUND OVER!`,
+          subtext: `${wName} WINS THE ROUND`,
+          timer: 2.5,
+          color: "#ffb700",
+        };
+      } else if (ev.event_type === "new_round") {
+        soundFx.playClick();
+        this.activeBanner = {
+          text: `ROUND ${ev.data.round} - FIGHT!`,
+          subtext: "DEFEND THE BLOCKS & ALTAR",
+          timer: 2.2,
+          color: "#00f0ff",
+        };
+      } else if (ev.event_type === "level_cleared") {
+        soundFx.playKO();
+        this.activeBanner = {
+          text: `LEVEL ${ev.data.level} CLEARED!`,
+          subtext: `ADVANCING TO NEXT COSMIC LEVEL...`,
+          timer: 2.5,
+          color: "#22c55e",
+        };
+      } else if (ev.event_type === "new_level") {
+        soundFx.playClick();
+        this.activeBanner = {
+          text: `LEVEL ${ev.data.level} - READY!`,
+          subtext: "SPACE COSMIC HAZARDS ACTIVE",
+          timer: 2.2,
+          color: "#c084fc",
+        };
       }
     }
   }
@@ -301,8 +336,7 @@ class StickClashGame {
 
       // Audio triggers on dash
       if (bitmask & (1 << 7)) {
-        // Dash sound
-        // Throttled in soundFx
+        // Dash sound throttled in soundFx
       }
     }
 
@@ -324,25 +358,25 @@ class StickClashGame {
       ctx.translate(shakeX, shakeY);
     }
 
-    const arenaTheme = this.latestSnapshot ? this.latestSnapshot.arena_id : "training_dojo";
+    const arenaTheme = this.latestSnapshot ? this.latestSnapshot.arena_id : "space_altar";
 
-    // 1. Background Parallax
+    // 1. Animated Cosmic Background Parallax
     this.arenaView.renderBackground(ctx, arenaTheme, now);
 
-    // 2. Hazards
+    // 2. 3D Block Structures & Altar Platforms
+    if (this.latestSnapshot && this.latestSnapshot.platforms) {
+      this.arenaView.renderPlatforms(ctx, this.latestSnapshot.platforms, now);
+    }
+
+    // 3. Void Survival Line / Hazard Barrier (Bottom boundary)
+    this.arenaView.renderSurvivalLine(ctx, now);
+
+    // 4. Hazards
     if (this.latestSnapshot && this.latestSnapshot.hazards) {
       this.arenaView.renderHazards(ctx, this.latestSnapshot.hazards, now);
     }
 
-    // Default ground line if no snapshot
-    ctx.strokeStyle = "#3b82f6";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(0, 680);
-    ctx.lineTo(1280, 680);
-    ctx.stroke();
-
-    // 3. Pickups & Projectiles
+    // 5. Pickups & Projectiles
     if (this.latestSnapshot) {
       if (this.latestSnapshot.pickups) {
         this.arenaView.renderPickups(ctx, this.latestSnapshot.pickups, now);
@@ -351,15 +385,62 @@ class StickClashGame {
         this.arenaView.renderProjectiles(ctx, this.latestSnapshot.projectiles);
       }
 
-      // 4. Players
+      // 6. Players (Stand and fight on blocks)
       for (const p of this.latestSnapshot.players) {
         this.stickmanRenderer.render(ctx, p, now);
       }
     }
 
-    // 5. Particles & Visual FX
+    // 7. Particles & Visual FX
     this.particleSystem.update(dt);
     this.particleSystem.render(ctx);
+
+    // 8. Round / Level Transition Banner
+    this.renderBanner(ctx, dt);
+
+    ctx.restore();
+  }
+
+  renderBanner(ctx, dt) {
+    if (!this.activeBanner || this.activeBanner.timer <= 0) return;
+    this.activeBanner.timer -= dt;
+
+    ctx.save();
+    const alpha = Math.min(1.0, this.activeBanner.timer * 2.0);
+    ctx.globalAlpha = alpha;
+
+    // Glass backdrop banner
+    const bgGrad = ctx.createLinearGradient(0, 230, 0, 360);
+    bgGrad.addColorStop(0, "rgba(9, 13, 22, 0)");
+    bgGrad.addColorStop(0.2, "rgba(9, 13, 22, 0.88)");
+    bgGrad.addColorStop(0.8, "rgba(9, 13, 22, 0.88)");
+    bgGrad.addColorStop(1, "rgba(9, 13, 22, 0)");
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 230, 1280, 130);
+
+    // Glowing border beams
+    ctx.strokeStyle = this.activeBanner.color;
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = this.activeBanner.color;
+    ctx.shadowBlur = 18;
+    ctx.beginPath();
+    ctx.moveTo(100, 246);
+    ctx.lineTo(1180, 246);
+    ctx.moveTo(100, 344);
+    ctx.lineTo(1180, 344);
+    ctx.stroke();
+
+    // Main Banner Title
+    ctx.font = "900 36px 'Orbitron', sans-serif";
+    ctx.fillStyle = this.activeBanner.color;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(this.activeBanner.text, 640, 285);
+
+    // Subtext
+    ctx.font = "700 14px 'Orbitron', sans-serif";
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(this.activeBanner.subtext, 640, 322);
 
     ctx.restore();
   }

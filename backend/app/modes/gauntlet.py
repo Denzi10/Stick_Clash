@@ -48,8 +48,11 @@ class GauntletMode(BaseMode):
         self.current_level = 1
         self.level_state = "countdown"  # countdown, active, level_results, upgrade_pick
         self.countdown_timer = 3.0
-        self.results_timer = 5.0
-        self.upgrade_timer = 10.0
+        self.results_timer = 2.5
+        self.upgrade_timer = 5.0
+        self.needs_level_reset = False
+        self.just_completed_level = False
+        self.level_winner_id: Optional[str] = None
 
         # Level objective
         self.current_objective = "kill_count"
@@ -148,12 +151,12 @@ class GauntletMode(BaseMode):
                             self.complete_level(p.id, active_players)
                             return
 
-            # Check level completion
-            if self.current_objective == "kill_count":
-                for p in active_players:
-                    if self.level_kills.get(p.id, 0) >= self.level_kill_target:
-                        self.complete_level(p.id, active_players)
-                        return
+            # Check level completion - if an opponent dies in gauntlet level
+            alive_players = [p for p in active_players if p.combat.health > 0.0]
+            if len(alive_players) <= 1:
+                winner = alive_players[0].id if alive_players else None
+                self.complete_level(winner, active_players)
+                return
 
             if self.current_objective == "boss" and self.boss_health <= 0.0:
                 self.complete_level(None, active_players)
@@ -167,7 +170,7 @@ class GauntletMode(BaseMode):
             if self.results_timer <= 0.0:
                 self.generate_upgrade_offers(active_players)
                 self.level_state = "upgrade_pick"
-                self.upgrade_timer = 10.0
+                self.upgrade_timer = 5.0
 
         elif self.level_state == "upgrade_pick":
             self.upgrade_timer -= dt
@@ -175,10 +178,13 @@ class GauntletMode(BaseMode):
                 # Advance to next level
                 self.current_level += 1
                 self.setup_level()
+                self.needs_level_reset = True
 
     def complete_level(self, winner_player_id: Optional[str], active_players: list) -> None:
         self.level_state = "level_results"
-        self.results_timer = 5.0
+        self.results_timer = 2.5
+        self.just_completed_level = True
+        self.level_winner_id = winner_player_id
         if winner_player_id:
             self.player_scores[winner_player_id] = (
                 self.player_scores.get(winner_player_id, 0) + 200

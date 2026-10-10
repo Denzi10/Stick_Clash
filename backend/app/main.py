@@ -115,26 +115,38 @@ async def websocket_game_endpoint(websocket: WebSocket, room_code: str):
             msg = await websocket.receive_json()
             mtype = msg.get("type")
 
-            if mtype == "join":
+            if mtype in ["join", "select_class"]:
                 player_id = msg.get("player_id") or str(len(room.players) + 1)
                 nickname = (msg.get("nickname") or f"Player {len(room.players) + 1}")[:16]
                 f_class_str = msg.get("fighter_class", "brawler")
                 f_class = FighterClass(f_class_str)
                 team = int(msg.get("team", len(room.players) % 2))
 
-                # Check if reconnecting
+                # Check if reconnecting or updating fighter class in lobby
                 if player_id in room.players:
                     p = room.players[player_id]
                     p.connected = True
                     p.disconnected_at = None
                     p.is_bot = False
                     p.bot_ai = None
+                    p.fighter_class = f_class
+                    from .simulation.combat import CombatState
+                    p.combat = CombatState(f_class)
+                    p.team = team
                 else:
                     room.add_player(player_id, nickname, f_class, team=team)
 
                 room.connections[player_id] = websocket
 
                 # Broadcast lobby update
+                await broadcast_lobby(room)
+
+            elif mtype == "set_mode" and player_id == room.host_id:
+                new_mode_str = msg.get("mode", "duel")
+                room.set_mode(new_mode_str)
+                if "arena_id" in msg:
+                    room.arena_id = msg["arena_id"]
+                    room.arena_manager.set_arena(msg["arena_id"])
                 await broadcast_lobby(room)
 
             elif mtype == "input" and player_id and player_id in room.players:

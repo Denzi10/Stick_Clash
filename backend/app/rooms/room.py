@@ -250,6 +250,20 @@ class GameRoom:
             return GauntletMode()
         return FreeForAllMode()
 
+    def set_mode(self, mode_str: str) -> None:
+        try:
+            new_mode = GameMode(mode_str)
+            self.mode_type = new_mode
+            self.game_mode = self.create_mode(new_mode)
+        except Exception:
+            pass
+
+    def update_player_class(self, player_id: str, fighter_class: FighterClass) -> None:
+        if player_id in self.players:
+            p = self.players[player_id]
+            p.fighter_class = fighter_class
+            p.combat = CombatState(fighter_class)
+
     def add_player(
         self,
         player_id: str,
@@ -313,6 +327,11 @@ class GameRoom:
                 difficulty=default_bot_difficulty,
             )
         self.in_game = True
+        # Randomize background theme / arena for every game if set to random or empty
+        available_arenas = list(self.arena_manager.all_arenas.keys())
+        if self.arena_id in ["random", "all", ""] or not self.arena_id:
+            import random
+            self.arena_id = random.choice(available_arenas)
         self.arena_manager.set_arena(self.arena_id)
         for p in self.players.values():
             self.respawn_player(p)
@@ -366,7 +385,7 @@ class GameRoom:
                 # Dead / Ragdoll
                 p.respawn_timer += dt
                 if p.respawn_timer >= RESPAWN_DELAY_SECS:
-                    if self.mode_type != GameMode.DUEL:
+                    if self.mode_type not in [GameMode.DUEL, GameMode.GAUNTLET]:
                         self.respawn_player(p)
                 continue
 
@@ -382,6 +401,17 @@ class GameRoom:
                 )
 
             p.apply_inputs(p.latest_input_bitmask, dt, arena.platforms, arena.wrap_horizontal)
+
+            # Void Survival Line Check: Falling off blocks into the abyss below y = 665
+            if p.physics.y >= 665.0 and p.combat.health > 0.0:
+                p.combat.health = 0.0
+                k, a = self.game_mode.process_kill(p.id, None, now_time)
+                self.events_queue.append(
+                    DiscreteEvent(
+                        event_type="ko",
+                        data={"victim_id": p.id, "killer_id": None, "hazard": "void_barrier"},
+                    )
+                )
 
         # 3. Item System & Projectiles
         player_coords = {p.id: (p.physics.x, p.physics.y) for p in self.players.values()}
@@ -524,6 +554,62 @@ class GameRoom:
         # 7. Update Game Mode
         self.game_mode.update(dt, list(self.players.values()))
 
+        # 8. Round & Level Transitions (When one person dies / level is completed)
+        if self.mode_type == GameMode.DUEL and isinstance(self.game_mode, DuelMode):
+            if getattr(self.game_mode, "just_finished_round", False):
+                self.game_mode.just_finished_round = False
+                self.events_queue.append(
+                    DiscreteEvent(
+                        event_type="round_over",
+                        data={
+                            "winner_id": self.game_mode.last_round_winner,
+                            "round": self.game_mode.current_round - 1,
+                            "next_round": self.game_mode.current_round,
+                            "round_wins": dict(self.game_mode.round_wins),
+                        },
+                    )
+                )
+
+            if getattr(self.game_mode, "needs_round_reset", False) and not self.game_mode.is_game_over:
+                self.game_mode.needs_round_reset = False
+                for p in self.players.values():
+                    self.respawn_player(p)
+                self.events_queue.append(
+                    DiscreteEvent(
+                        event_type="new_round",
+                        data={"round": self.game_mode.current_round},
+                    )
+                )
+
+        elif self.mode_type == GameMode.GAUNTLET and isinstance(self.game_mode, GauntletMode):
+            if getattr(self.game_mode, "just_completed_level", False):
+                self.game_mode.just_completed_level = False
+                self.events_queue.append(
+                    DiscreteEvent(
+                        event_type="level_cleared",
+                        data={
+                            "level": self.game_mode.current_level,
+                            "next_level": self.game_mode.current_level + 1,
+                            "winner_id": self.game_mode.level_winner_id,
+                        },
+                    )
+                )
+
+            if getattr(self.game_mode, "needs_level_reset", False):
+                self.game_mode.needs_level_reset = False
+                arenas_cycle = ["space_altar", "neon_city", "snow_peaks", "volcano_pit", "sky_islands"]
+                next_arena = arenas_cycle[(self.game_mode.current_level - 1) % len(arenas_cycle)]
+                self.arena_id = next_arena
+                self.arena_manager.set_arena(next_arena)
+                for p in self.players.values():
+                    self.respawn_player(p)
+                self.events_queue.append(
+                    DiscreteEvent(
+                        event_type="new_level",
+                        data={"level": self.game_mode.current_level, "arena_id": self.arena_id},
+                    )
+                )
+
     async def broadcast_snapshot(self) -> None:
         if not self.connections:
             return
@@ -539,6 +625,7 @@ class GameRoom:
         ]
         pickups_snap, projs_snap = self.item_system.to_snapshots()
         hazards_snap = self.arena_manager.get_hazard_snapshots()
+        platforms_snap = self.arena_manager.get_platform_snapshots()
 
         snapshot = MatchSnapshot(
             tick=self.tick,
@@ -546,6 +633,7 @@ class GameRoom:
             mode=self.mode_type,
             arena_id=self.arena_id,
             players=players_snap,
+            platforms=platforms_snap,
             projectiles=projs_snap,
             pickups=pickups_snap,
             hazards=hazards_snap,

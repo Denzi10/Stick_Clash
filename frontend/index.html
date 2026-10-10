@@ -52,14 +52,29 @@
               <button id="btn-copy-link" class="btn-secondary">SHARE LINK</button>
             </div>
 
-            <div style="display: flex; gap: 10px; align-items: center">
-              <select id="select-bot-difficulty" class="join-code-input" style="width: 110px; font-size: 13px">
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap">
+              <select id="select-game-mode" class="join-code-input" style="width: 135px; font-size: 12px; padding: 6px" title="Game Mode">
+                <option value="duel" selected>⚔️ DUEL (1v1)</option>
+                <option value="ffa">💥 FREE FOR ALL</option>
+                <option value="team_clash">🛡️ TEAM CLASH</option>
+                <option value="gauntlet">🌌 GAUNTLET</option>
+              </select>
+              <select id="select-arena-theme" class="join-code-input" style="width: 145px; font-size: 12px; padding: 6px" title="Arena & Background Theme">
+                <option value="random" selected>🎲 RANDOM THEME</option>
+                <option value="space_altar">🌌 SPACE ALTAR</option>
+                <option value="neon_city">🏙️ NEON CITY</option>
+                <option value="snow_peaks">❄️ SNOW PEAKS</option>
+                <option value="volcano_pit">🌋 VOLCANO PIT</option>
+                <option value="sky_islands">☁️ SKY ISLANDS</option>
+                <option value="jungle_ruins">🌿 JUNGLE RUINS</option>
+              </select>
+              <select id="select-bot-difficulty" class="join-code-input" style="width: 95px; font-size: 12px; padding: 6px" title="Bot AI Difficulty">
                 <option value="easy">EASY</option>
                 <option value="normal" selected>NORMAL</option>
                 <option value="hard">HARD</option>
               </select>
-              <button id="btn-add-bot" class="btn-secondary">+ ADD BOT</button>
-              <button id="btn-start-match" class="btn-primary">START MATCH</button>
+              <button id="btn-add-bot" class="btn-secondary" style="padding: 8px 12px; font-size: 12px">+ BOT</button>
+              <button id="btn-start-match" class="btn-primary" style="padding: 8px 18px; font-size: 13px">START MATCH</button>
             </div>
           </div>
 
